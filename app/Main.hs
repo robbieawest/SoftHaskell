@@ -6,6 +6,91 @@ import Graphics.Gloss.Data.ViewPort
 import Data.Strict.Vector as V
 
 
+{-
+handleCollision :: (((Int, Int), Node), ((Int, Int), Node)) -> (((Int, Int), Node), ((Int, Int), Node))
+handleCollision (((i, j), node1), ((k, p), node2)) = (((i, j), updatedNode1), ((k, p), updatedNode2))
+    -- | otherwise = (node1, node2)
+    where
+        --Unpack nodes
+        (Node m g r colRad pastPos pos vel) = node1
+        (Node _ _ _ _ pastPos1 pos1 vel1) = node2
+
+        --Get difference in their positions 
+        diff = pos1 `sv` pos
+        n = normalize diff
+
+
+        --Move each node and store the new position values
+        --This is moving each node on their shared axis away from eachover at a magnitude of half of the distance between them
+        --Node that one of them has (-c) this is because the differnce calculation is node2 - node1, so node1 must be negative here 
+        (Node _ _ _ _ newPP newP _) = moveNode node1 ((n `mv` (-colRad)) `pv` (diff `mv` 0.5))
+        (Node _ _ _ _ newPP1 newP1 _) = moveNode node2 ((n `mv` colRad) `sv` (diff `mv` 0.5))
+
+        --reflectedVel = n `mv` (-1.0 * dot n vel) --Reflected velocity for node1
+        --reflectedVel1 = n `mv` (-1.0 * dot n vel1) --Reflected velocity for node2
+
+        conserve = (dot vel n - dot vel1 n) / m
+        resultant = n `mv` (conserve * m)
+
+        finalVel = (vel `sv` resultant) `mv` 0.99
+        finalVel1 = (vel1 `pv` resultant) `mv` 0.99
+
+
+        
+        --Update nodes
+        updatedNode1 = Node m g r colRad newPP newP finalVel
+        updatedNode2 = Node m g r colRad newPP1 newP1 finalVel1
+        --updatedNode1 = Node m g r colRad newPP newP vel
+        --updatedNode2 = Node m g r colRad newPP1 newP1 vel1
+
+type Collisions = Vector (((Int, Int), Node), ((Int, Int), Node))
+
+checkCollision :: Vector (Vector Node) -> Int -> Int -> Int -> Int -> Collisions
+checkCollision nodes i j k p
+    | collisionPred node1 node2 = fromList [(((i, j), node1), ((k, p), node2))]
+    | otherwise = empty
+    where
+        node1 = iNode nodes (i, j)
+        node2 = iNode nodes (k, p)
+
+getNodeRowCollisions :: Vector (Vector Node) -> Collisions -> Int -> Int -> Int -> Int -> Collisions
+getNodeRowCollisions nodes cols i j k p   
+    | p < V.length(nodes ! k) = seq rowFullRes (seq getCol rowFullRes)
+    | otherwise = cols
+    where
+        getCol = checkCollision nodes i j k p
+        rowFullRes = getNodeRowCollisions nodes (cols V.++ getCol) i j k (p + 1)
+
+getNodeCollisions :: Vector (Vector Node) -> Collisions -> Int -> Int -> Int -> Collisions
+getNodeCollisions nodes cols i j k
+    | k < V.length nodes = seq fullRes(seq rowRes fullRes)
+    | otherwise = cols
+    where
+        rowRes = getNodeRowCollisions nodes cols i j k 0
+        fullRes = getNodeCollisions nodes (cols V.++ rowRes) i j (k + 1)
+
+concatSplitCols :: Collisions -> Vector ((Int, Int), Node)
+concatSplitCols cols
+    | cols == empty = empty
+    | otherwise = currn1 `cons` fromList [currn2] V.++ concatSplitCols others
+    where
+        (currn1, currn2) = head cols
+        others = tail cols
+
+hasDuplicate :: Collisions -> (((Int, Int), Node), ((Int, Int), Node)) -> Bool
+hasDuplicate cols (col1, col2)
+    | cols == empty = False
+    | otherwise = (col1 == otherCol2 && col2 == otherCol1) || (col1 == otherCol1 && col2 == otherCol2)
+                    || hasDuplicate otherCols (col1, col2)
+    where 
+        (otherCol1, otherCol2) = head cols
+        otherCols = tail cols
+
+
+removeDuplicateCols :: Collisions -> Collisions
+removeDuplicateCols cols = V.filter (hasDuplicate cols) cols
+-}
+
 type Vec2f = (Float, Float)
 
 pythag :: Vec2f -> Float
@@ -275,23 +360,74 @@ handleOneCol nodes i j k p
         node1 = iNode nodes (i, j)
         node2 = iNode nodes (k, p)
 
+--Exclusive range bound
+inBounds :: Int -> Int -> Bool
+inBounds ind bound = ind >= 0 && ind < bound
 
+--Inclusive full bound
+fullBound :: Int -> Int -> Int -> Bool
+fullBound ind lower upper = ind >= lower && ind <= upper
 
 perNodeRowCollision :: Vector (Vector Node) -> Int -> Int -> Int -> Int -> Vector (Vector Node)
 perNodeRowCollision nodes i j k p   
-    | p < V.length(nodes ! k) = seq rowFullRes (seq handleOneRes rowFullRes)
+    | p <= j + 1 = seq rowFullRes (seq handleOneRes rowFullRes)
     | otherwise = nodes
     where
-        handleOneRes = handleOneCol nodes i j k p
+        handleOneRes
+            | not (inBounds k (V.length nodes) && inBounds p (V.length (nodes ! 0))) = nodes
+            | otherwise = handleOneCol nodes i j k p
+           -- | otherwise = nodes
         rowFullRes = perNodeRowCollision handleOneRes i j k (p + 1) 
+
+lineCollision :: Node -> (Vec2f, Vec2f) -> Vec2f -> Node
+lineCollision (Node m g r c pastPos pos vel) (point1, point2) pushNormal
+    | collides = seq moveDistance (Node m g r c pos (pushNormal `mv` moveDistance) reflectedVel)
+    | otherwise = Node m g r c pastPos pos vel
+    where
+        diff = point2 `sv` point1
+        toNode = point2 `sv` pos
+
+        --Then project toNode onto diff to get the closest point on the line (with respect to point2)
+        closestPoint = diff `mv` (dot toNode diff / dot toNode toNode) 
+
+        --We can then get the difference between the closest point and the original node to check for a collision
+        collisionDiff = seq closestPoint (pos `sv` closestPoint)
+        collisionL = seq collisionDiff (pythag collisionDiff)
+        collides = collisionL <= c
+
+        --This calculates the distance that is needed to be moved, not that this is intentionally not a vector
+        --We need to mutliply pushNormal by the move distance, as depending on how far the node is behind the line,
+        -- the move vector could send it further in the direction we do not want.
+        moveDistance = pythag $! collisionDiff `mv` (c / collisionL - 1.0)
+
+        --Reflect velocity
+        reflectedVel = vel `sv` (pushNormal `mv` (dot pushNormal vel * 2.0))
+
+
+
+
+
+iterateCollisionsJ :: Int -> Vector (Vector Node) -> (Int, Int) -> (Int, Int) -> (Int, Int) -> Vector (Vector Node)
+iterateCollisionsJ increasing nodes (i, j) (p, k) (pp, pk) --Last values are for the past node
+    | fullBound k (j - 1) (j + 1) = if p /= pp && k /= pk then undefined else undefined
+    | otherwise = nodes -- End of iteration
+    where
+        (Node m g r c pastPos pos vel) = nodes ! i ! j
+        (Node _ _ _ _ _ posCurr _) = nodes ! p ! k
+        (Node _ _ _ _ _ posPast _) = nodes ! pp ! pk
+
+        collisionRes = nodes 
+        nextRes = seq collisionRes (iterateCollisionsJ increasing collisionRes (i, j) (p, k + increasing) (p, k))
 
 perNodeCollision :: Vector (Vector Node) -> Int -> Int -> Int -> Vector (Vector Node)
 perNodeCollision nodes i j k
-    | k < V.length nodes = seq fullRes(seq rowRes fullRes)
+    | k <= i + 1 = seq fullRes(seq rowRes fullRes)
+    -- | k < V.length nodes = seq fullRes(seq rowRes fullRes)
     | otherwise = nodes
     where
-        rowRes = perNodeRowCollision nodes i j k 0
+        rowRes = perNodeRowCollision nodes i j k (j - 1)
         fullRes = perNodeCollision rowRes i j (k + 1)
+        
 
 
 collisionPred :: Node -> Node -> Bool
@@ -303,90 +439,6 @@ collisionPred node1 node2 = diffL /= 0.0 && diffL < c + c1
 
         
 
-{-
-handleCollision :: (((Int, Int), Node), ((Int, Int), Node)) -> (((Int, Int), Node), ((Int, Int), Node))
-handleCollision (((i, j), node1), ((k, p), node2)) = (((i, j), updatedNode1), ((k, p), updatedNode2))
-    -- | otherwise = (node1, node2)
-    where
-        --Unpack nodes
-        (Node m g r colRad pastPos pos vel) = node1
-        (Node _ _ _ _ pastPos1 pos1 vel1) = node2
-
-        --Get difference in their positions 
-        diff = pos1 `sv` pos
-        n = normalize diff
-
-
-        --Move each node and store the new position values
-        --This is moving each node on their shared axis away from eachover at a magnitude of half of the distance between them
-        --Node that one of them has (-c) this is because the differnce calculation is node2 - node1, so node1 must be negative here 
-        (Node _ _ _ _ newPP newP _) = moveNode node1 ((n `mv` (-colRad)) `pv` (diff `mv` 0.5))
-        (Node _ _ _ _ newPP1 newP1 _) = moveNode node2 ((n `mv` colRad) `sv` (diff `mv` 0.5))
-
-        --reflectedVel = n `mv` (-1.0 * dot n vel) --Reflected velocity for node1
-        --reflectedVel1 = n `mv` (-1.0 * dot n vel1) --Reflected velocity for node2
-
-        conserve = (dot vel n - dot vel1 n) / m
-        resultant = n `mv` (conserve * m)
-
-        finalVel = (vel `sv` resultant) `mv` 0.99
-        finalVel1 = (vel1 `pv` resultant) `mv` 0.99
-
-
-        
-        --Update nodes
-        updatedNode1 = Node m g r colRad newPP newP finalVel
-        updatedNode2 = Node m g r colRad newPP1 newP1 finalVel1
-        --updatedNode1 = Node m g r colRad newPP newP vel
-        --updatedNode2 = Node m g r colRad newPP1 newP1 vel1
-
-type Collisions = Vector (((Int, Int), Node), ((Int, Int), Node))
-
-checkCollision :: Vector (Vector Node) -> Int -> Int -> Int -> Int -> Collisions
-checkCollision nodes i j k p
-    | collisionPred node1 node2 = fromList [(((i, j), node1), ((k, p), node2))]
-    | otherwise = empty
-    where
-        node1 = iNode nodes (i, j)
-        node2 = iNode nodes (k, p)
-
-getNodeRowCollisions :: Vector (Vector Node) -> Collisions -> Int -> Int -> Int -> Int -> Collisions
-getNodeRowCollisions nodes cols i j k p   
-    | p < V.length(nodes ! k) = seq rowFullRes (seq getCol rowFullRes)
-    | otherwise = cols
-    where
-        getCol = checkCollision nodes i j k p
-        rowFullRes = getNodeRowCollisions nodes (cols V.++ getCol) i j k (p + 1)
-
-getNodeCollisions :: Vector (Vector Node) -> Collisions -> Int -> Int -> Int -> Collisions
-getNodeCollisions nodes cols i j k
-    | k < V.length nodes = seq fullRes(seq rowRes fullRes)
-    | otherwise = cols
-    where
-        rowRes = getNodeRowCollisions nodes cols i j k 0
-        fullRes = getNodeCollisions nodes (cols V.++ rowRes) i j (k + 1)
-
-concatSplitCols :: Collisions -> Vector ((Int, Int), Node)
-concatSplitCols cols
-    | cols == empty = empty
-    | otherwise = currn1 `cons` fromList [currn2] V.++ concatSplitCols others
-    where
-        (currn1, currn2) = head cols
-        others = tail cols
-
-hasDuplicate :: Collisions -> (((Int, Int), Node), ((Int, Int), Node)) -> Bool
-hasDuplicate cols (col1, col2)
-    | cols == empty = False
-    | otherwise = (col1 == otherCol2 && col2 == otherCol1) || (col1 == otherCol1 && col2 == otherCol2)
-                    || hasDuplicate otherCols (col1, col2)
-    where 
-        (otherCol1, otherCol2) = head cols
-        otherCols = tail cols
-
-
-removeDuplicateCols :: Collisions -> Collisions
-removeDuplicateCols cols = V.filter (hasDuplicate cols) cols
--}
 
 nodeCollisionRow :: Vector (Vector Node) -> Int -> Int -> Vector (Vector Node)
 nodeCollisionRow nodes i j
@@ -394,7 +446,7 @@ nodeCollisionRow nodes i j
     | otherwise = nodes
     where
         nodeColRowRes = nodeCollisionRow colRes i (j + 1)
-        colRes = perNodeCollision nodes i j 0
+        colRes = perNodeCollision nodes i j (i - 1)
 
         --collisions = getNodeCollisions nodes empty i j 0 --Get all collisions before handling
         --handledCols = Prelude.foldl (Prelude.++) $ map (splitCollision . toList . handleCollision) collisions --Handle collisions
@@ -493,7 +545,7 @@ springToPicture nodes (Spring d sc al n1 n2) = col line
         line = Line [translatePointOrigin(getPos nodes n1), translatePointOrigin(getPos nodes n2)]
 
         --Red = Spring is compressed, blue = spring is extended
-        col = color $! makeColor (0.1 + max 0 colorCoef) 0.1 (0.1 + (-1.0) * min 0 colorCoef) 1.0
+        col = color $! makeColor (0.3 + max 0 colorCoef) 0.3 (0.3 + (-1.0) * min 0 colorCoef) 1.0
 
 
 nodeToPicture :: Node -> Picture
@@ -539,10 +591,10 @@ draw (Simulation nodes springs) = res
 main :: IO ()
 main = simulate
             (InWindow "SoftHaskell"
-                        (floor screenX + 300, floor screenY + 100)
+                        (floor screenX + 300, floor screenY)
                         (10, 10))
             black
             144
-            (initial 14 14 1.0 1.2 9.0 14.0 10.0 15.0 35.0 (150.0, 150.0))
+            (initial 14 14 1.0 1.2 9.0 12.0 10.0 15.0 35.0 (150.0, 150.0))
             draw
             step
