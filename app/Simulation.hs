@@ -22,7 +22,7 @@ collisionStep (Simulation nodes springs) dt = seq nodesCollisionRes (Simulation 
         boundaryRes = (map.map) boundaryCollision nodes
 
 
-
+--This function also increments position with velocity, not only for gravity
 addGravity :: Float -> ViewPort -> Node -> Node
 addGravity dt view (Node m g r c pp p v) = Node m g r c pp (p `plus` newV) newV
     where
@@ -254,6 +254,7 @@ nodeCollisions nodes i
 
 
 --Functions to initialize the structure and create the first state
+
 createPartition :: Vector (Vector Node) -> Int -> Int -> Float -> Float -> Float -> Vector Spring
 createPartition nodes i j d sc al = firstSpring `cons` full 
     where
@@ -284,7 +285,7 @@ topSprings nodes springs j d sc al
                                       topSprings nodes springs (j + 1) d sc al 
     | otherwise = empty
         
-
+--Initializing spring structure is creating partitions of springs until they end, and then after creating the top row
 initializeSpringStructure :: Vector (Vector Node) -> Float -> Float -> Float -> Vector Spring
 initializeSpringStructure nodes d sc al = bot V.++ top
     where

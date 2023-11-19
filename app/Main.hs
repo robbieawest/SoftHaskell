@@ -14,9 +14,9 @@ import Constants
 main :: IO ()
 main = simulate
             (InWindow "SoftHaskell"
-                        (floor screenX + 300, floor screenY)
+                        (floor screenX + 100, floor screenY + 100) --Extra offset gives a border
                         (10, 10))
-            black
+            (makeColor br bg bb 1.0)
             144
             (initial
                 structureWidth
@@ -31,3 +31,4 @@ main = simulate
                 origin)
             draw
             step
+    where (br, bg, bb) = backgroundColor
