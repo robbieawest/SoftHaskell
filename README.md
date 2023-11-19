@@ -1,5 +1,7 @@
 # SoftHaskell
 
+This is my entry for the INF1A Haskell Competition 2023
+
 ## Program Description
 
 This is a simulation of soft bodies in 2D space using the Gloss library for Haskell.
