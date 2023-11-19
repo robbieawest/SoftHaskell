@@ -3,7 +3,9 @@ module Base where
 import Prelude hiding (replicate, head, tail, map)
 import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort
-import Data.StrictV.Vector as V
+import Data.Strict.Vector as V
+
+import Constants
 
 --Vec2f functions
 type Vec2f = (Float, Float)
@@ -61,9 +63,9 @@ data Simulation = Simulation {
 
 
 getPos :: Vector (Vector Node) -> (Int, Int) -> Vec2f
-getPos nodes ind = pos
+getPos nodes (i, j) = pos
     where
-        (Node m g r c pp pos v) = iNode nodes ind
+        (Node m g r c pp pos v) = nodes ! i ! j
 
 i1i2 :: Int -> Int -> (Int, Int) 
 i1i2 ind w = (i, j)

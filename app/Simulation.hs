@@ -3,9 +3,10 @@ module Simulation where
 import Prelude hiding (replicate, head, tail, map)
 import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort
-import Data.StrictV.Vector as V
+import Data.Strict.Vector as V
 
 import Base
+import Constants
 
 --Stepping functions
 step :: ViewPort -> Float -> Simulation -> Simulation
@@ -195,6 +196,7 @@ perNodeRowCollision nodes i j k p
         handleOneRes
             | not (inBounds k (V.length nodes) && inBounds p (V.length (nodes ! 0))) = nodes
             | otherwise = handleOneCol nodes i j k p
+        rowFullRes = perNodeRowCollisionFull handleOneRes i j k (p + 1) 
 
 perNodeRowCollisionFull :: Vector (Vector Node) -> Int -> Int -> Int -> Int -> Vector (Vector Node)
 perNodeRowCollisionFull nodes i j k p   
