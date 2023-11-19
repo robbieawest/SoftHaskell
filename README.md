@@ -31,7 +31,7 @@ Strict containers were needed to combat space leaks.
 
 ### File Structure
 
-The file structure follows the default cabal file structure, where the main directory contains a CHANGELOG.md, a README.md, a SoftHaskell.cabal file and an /app/ folder where the source files are contained.
+The file structure follows the default cabal file structure, where the main directory contains a CHANGELOG.md, a README.md, a SoftHaskell.cabal file, an /app/ folder where the source files are contained, and a /videos/ folder where the sample output is given.
 
 This program uses multiple source files:
 Main.hs (Constains the main :: IO() function)
@@ -39,6 +39,9 @@ Constants.hs (Simulation constants)
 Simulation.hs (Functions for the simulation)
 Base.hs (Misc and drawing functions, definitions of data structures) 
 
+#### Sidenote on sample output
+
+The output given is using constants that I have found produce nice results, changing constants may produce a result which does not look as good or as functional as the ones provided.
 
 
 
