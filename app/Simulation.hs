@@ -1,6 +1,6 @@
 module Simulation where
 
-import Prelude hiding (replicate, head, tail, map)
+import Prelude hiding (replicate, head, tail, map, subtract)
 import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort
 import Data.Strict.Vector as V
@@ -24,11 +24,11 @@ collisionStep (Simulation nodes springs) dt = seq nodesCollisionRes (Simulation 
 
 
 addGravity :: Float -> ViewPort -> Node -> Node
-addGravity dt view (Node m g r c pp p v) = Node m g r c pp (p `pv` newV) newV
+addGravity dt view (Node m g r c pp p v) = Node m g r c pp (p `plus` newV) newV
     where
         theta = viewPortRotate view * (pi / 180.0) 
         gravVec = (sin theta, cos theta)
-        newV = v `pv` (gravVec `mv` (dt * g))
+        newV = v `plus` (gravVec `multiply` (dt * g))
 
 physicsStep :: Simulation -> Float -> ViewPort -> Simulation
 physicsStep (Simulation nodes springs) dt view = seq hookesRes (Simulation hookesRes springs)
@@ -58,7 +58,7 @@ physics nodes (Spring damping springConstant anchorLength n1 n2) dt
         (Node m g r c pp p v) = nodes ! n1i ! n1j --Index nodes
         (Node m1 g1 r1 c1 pp1 p1 v1) = nodes ! n2i ! n2j
 
-        (diffx, diffy) = p1 `sv` p
+        (diffx, diffy) = p1 `subtract` p
         theta = atan2 diffy diffx
         len = pythag (diffx, diffy)
 
@@ -69,18 +69,18 @@ physics nodes (Spring damping springConstant anchorLength n1 n2) dt
         normDiff = (diffx / len, diffy / len) --Normalise the distance, this can return type Infinity
         --We don't want this to be infinity^, because in that cause the positions of node1 and node2 are the same, which we will not caluculate
 
-        totalDampingForce = dot normDiff (v1 `sv` v) * damping --Calculate damping
+        totalDampingForce = dot normDiff (v1 `subtract` v) * damping --Calculate damping
         dampingForce = totalDampingForce * 0.5 --Divide by two to split across both nodes
 
-        forcePerDamped = forcePer `pv` (normDiff `mv` dampingForce)
+        forcePerDamped = forcePer `plus` (normDiff `multiply` dampingForce)
 
         --Apply forces and increment velocities
-        acceleration = forcePerDamped `dv` m
-        acceleration1 = forcePerDamped `dv` (-m1)
+        acceleration = forcePerDamped `divide` m
+        acceleration1 = forcePerDamped `divide` (-m1)
 
         --Update velocities
-        vUpdate = v `pv` (acceleration `mv` dt)
-        v1Update = v1 `pv` (acceleration1 `mv` dt)
+        vUpdate = v `plus` (acceleration `multiply` dt)
+        v1Update = v1 `plus` (acceleration1 `multiply` dt)
 
         res = updateNodes nodes [
                 (n1, Node m g r c pp p vUpdate),
@@ -125,18 +125,18 @@ boundaryCheck (Node m g r c pp (x, y) v)
 reflectNormal :: Node -> Vec2f -> Node
 reflectNormal (Node m g r c pp p v) normal = Node m g r c pp p newV
     where
-        reflectedV = v `sv` (normal `mv` (2.0 * dot v normal))
+        reflectedivide = v `subtract` (normal `multiply` (2.0 * dot v normal))
 
         (nx, ny) = normal
         normalGrad = ny / nx
         grad = -1.0 / normalGrad
 
         orthogSlopeForce = m * g * cos (atan grad) -- R = mgcos(theta) 
-        friction = frictionConstant * orthogSlopeForce -- Fr = uR
+        friction = frictionConstantC * orthogSlopeForce -- Fr = uR
 
         newV
-            | pythag reflectedV == 0 = v
-            | otherwise = reflectedV `sv` ((normalize reflectedV `mv` friction) `dv` m)
+            | pythag reflectedivide == 0 = v
+            | otherwise = reflectedivide `subtract` ((normalize reflectedivide `multiply` friction) `divide` m)
 
 
 
@@ -150,23 +150,23 @@ handleCollision node1 node2 = (updatedNode1, updatedNode2)
         (Node _ _ _ _ pastPos1 pos1 vel1) = node2
 
         --Get difference in their positions 
-        diff = pos1 `sv` pos
+        diff = pos1 `subtract` pos
         n = normalize diff --Norm Difference
 
 
         --Move each node and store the new position values
         --This is moving each node on their shared axis away from eachover at a magnitude of half of the distance between them
         --Node that one of them has (-c) this is because the differnce calculation is node2 - node1, so node1 must be negative here 
-        (Node _ _ _ _ newPP newP _) = moveNode node1 ((n `mv` (-colRad)) `pv` (diff `mv` 0.5))
-        (Node _ _ _ _ newPP1 newP1 _) = moveNode node2 ((n `mv` colRad) `sv` (diff `mv` 0.5))
+        (Node _ _ _ _ newPP newP _) = moveNode node1 ((n `multiply` (-colRad)) `plus` (diff `multiply` 0.5))
+        (Node _ _ _ _ newPP1 newP1 _) = moveNode node2 ((n `multiply` colRad) `subtract` (diff `multiply` 0.5))
 
         --This conserves momentum and energy while reflecting the velocities.
         --Without conserving momentum and energy node-node collision creates energy, greatly decreasing stability. 
         conserve = (dot vel n - dot vel1 n) / m
-        resultant = n `mv` (conserve * m)
+        resultant = n `multiply` (conserve * m)
 
-        finalVel = vel `sv` resultant
-        finalVel1 = vel1 `pv` resultant
+        finalVel = vel `subtract` resultant
+        finalVel1 = vel1 `plus` resultant
         
         --Update nodes
         updatedNode1 = Node m g r colRad newPP newP finalVel
@@ -227,7 +227,7 @@ perNodeCollision nodes i j k
 collisionPred :: Node -> Node -> Bool
 collisionPred node1 node2 = diffL /= 0.0 && diffL < c + c1
     where
-        diffL = pythag $ p `sv` p1
+        diffL = pythag $ p `subtract` p1
         (Node m g r c pp p v) = node1
         (Node m1 g1 r1 c1 pp1 p1 v1) = node2
 
@@ -296,7 +296,7 @@ initializeNodesRow i j w h m g r c al origin
     | j == w = empty
     | otherwise = Node m g r c pos pos (0.0, 0.0) `cons` initializeNodesRow i (j + 1) w h m g r c al origin
     where
-        pos = (fromIntegral j * al, fromIntegral i * al) `pv` origin
+        pos = (fromIntegral j * al, fromIntegral i * al) `plus` origin
 
 initializeNodeStructure :: Int -> Int -> Int -> Float -> Float -> Float -> Float -> Float -> (Float, Float) -> Vector (Vector Node)
 initializeNodeStructure i w h m g r c al origin

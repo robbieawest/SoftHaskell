@@ -1,6 +1,6 @@
 module Base where
 
-import Prelude hiding (replicate, head, tail, map)
+import Prelude hiding (replicate, head, tail, map, subtract)
 import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort
 import Data.Strict.Vector as V
@@ -9,6 +9,7 @@ import Constants
 
 --Vec2f functions
 type Vec2f = (Float, Float)
+
 
 pythag :: Vec2f -> Float
 pythag (x1, y1) = sqrt (x1 * x1 + y1 * y1)
@@ -29,17 +30,17 @@ data Spring = Spring {
 } deriving(Show)
 
 --Todo: define actual operators for these!
-pv :: Vec2f -> Vec2f -> Vec2f 
-pv (x1,y1) (x2,y2) = (x1 + x2, y1 + y2)
+plus :: Vec2f -> Vec2f -> Vec2f 
+plus (x1,y1) (x2,y2) = (x1 + x2, y1 + y2)
 
-mv :: Vec2f -> Float -> Vec2f
-mv (x1, y1) f = (x1 * f, y1 * f)
+multiply :: Vec2f -> Float -> Vec2f
+multiply (x1, y1) f = (x1 * f, y1 * f)
 
-sv :: Vec2f -> Vec2f -> Vec2f
-sv (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
+subtract :: Vec2f -> Vec2f -> Vec2f
+subtract (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
 
-dv :: Vec2f -> Float -> Vec2f
-dv (x, y) f = (x / f, y / f)
+divide :: Vec2f -> Float -> Vec2f
+divide (x, y) f = (x / f, y / f)
 
 --Node data structure 
 data Node = Node {
@@ -53,7 +54,7 @@ data Node = Node {
 } deriving(Eq, Show)
 
 moveNode :: Node -> Vec2f -> Node
-moveNode (Node m g r c pp p v) diff = Node m g r c p (p `pv` diff) v
+moveNode (Node m g r c pp p v) diff = Node m g r c p (p `plus` diff) v
 
 --Simulation data structure
 data Simulation = Simulation {
@@ -110,7 +111,7 @@ translatePointOrigin (x, y) = (x - (screenX / 2.0), (screenY / 2.0) - y)
 springToPicture :: Vector (Vector Node) -> Spring -> Picture
 springToPicture nodes (Spring d sc al n1 n2) = col line
     where
-        diff = getPos nodes n2 `sv` getPos nodes n1
+        diff = getPos nodes n2 `subtract` getPos nodes n1
         pushOrPull = (al - pythag diff) * 0.1
         colorCoef = tanh pushOrPull --Put within -1<->1 range
         
