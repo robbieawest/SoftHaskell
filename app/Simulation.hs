@@ -178,6 +178,12 @@ doCollision nodes i j k p node1 node2 = updated
         (collidedNode1, collidedNode2) = handleCollision node1 node2
         updated = updateNodes nodes [((i, j), collidedNode1), ((k, p), collidedNode2)]
 
+collisionPred :: Node -> Node -> Bool
+collisionPred node1 node2 = diffL /= 0.0 && diffL < c + c1
+    where
+        diffL = pythag $ p `subtract` p1
+        (Node m g r c pp p v) = node1
+        (Node m1 g1 r1 c1 pp1 p1 v1) = node2
 
 handleOneCol :: Vector (Vector Node) -> Int -> Int -> Int -> Int -> Vector (Vector Node)
 handleOneCol nodes i j k p
@@ -188,50 +194,23 @@ handleOneCol nodes i j k p
         node2 = nodes ! k ! p
 
 
+
 perNodeRowCollision :: Vector (Vector Node) -> Int -> Int -> Int -> Int -> Vector (Vector Node)
 perNodeRowCollision nodes i j k p   
-    | p <= j + 1 = seq rowFullRes (seq handleOneRes rowFullRes)
-    | otherwise = nodes
-    where
-        handleOneRes
-            | not (inBounds k (V.length nodes) && inBounds p (V.length (nodes ! 0))) = nodes
-            | otherwise = handleOneCol nodes i j k p
-        rowFullRes = perNodeRowCollisionFull handleOneRes i j k (p + 1) 
-
-perNodeRowCollisionFull :: Vector (Vector Node) -> Int -> Int -> Int -> Int -> Vector (Vector Node)
-perNodeRowCollisionFull nodes i j k p   
     | p < V.length (nodes ! k) = seq rowFullRes (seq handleOneRes rowFullRes)
     | otherwise = nodes
     where
         handleOneRes = handleOneCol nodes i j k p
-        rowFullRes = perNodeRowCollisionFull handleOneRes i j k (p + 1) 
+        rowFullRes = perNodeRowCollision handleOneRes i j k (p + 1) 
 
-perNodeCollisionFull :: Vector (Vector Node) -> Int -> Int -> Int -> Vector (Vector Node)
-perNodeCollisionFull nodes i j k
-    | k < V.length nodes = seq fullRes(seq rowRes fullRes)
-    | otherwise = nodes
-    where
-        rowRes = perNodeRowCollisionFull nodes i j k 0
-        fullRes = perNodeCollisionFull rowRes i j (k + 1)
 
 perNodeCollision :: Vector (Vector Node) -> Int -> Int -> Int -> Vector (Vector Node)
 perNodeCollision nodes i j k
-    | k <= i + 1 = seq fullRes(seq rowRes fullRes)
+    | k < V.length nodes = seq fullRes(seq rowRes fullRes)
     | otherwise = nodes
     where
-        rowRes = perNodeRowCollision nodes i j k (j - 1)
+        rowRes = perNodeRowCollision nodes i j k 0
         fullRes = perNodeCollision rowRes i j (k + 1)
-        
-
-
-collisionPred :: Node -> Node -> Bool
-collisionPred node1 node2 = diffL /= 0.0 && diffL < c + c1
-    where
-        diffL = pythag $ p `subtract` p1
-        (Node m g r c pp p v) = node1
-        (Node m1 g1 r1 c1 pp1 p1 v1) = node2
-
-        
 
 
 nodeCollisionRow :: Vector (Vector Node) -> Int -> Int -> Vector (Vector Node)
@@ -240,8 +219,7 @@ nodeCollisionRow nodes i j
     | otherwise = nodes
     where
         nodeColRowRes = nodeCollisionRow colRes i (j + 1)
-        --colRes = perNodeCollision nodes i j (i - 1)
-        colRes = perNodeCollisionFull nodes i j 0
+        colRes = perNodeCollision nodes i j 0
 
 
 nodeCollisions :: Vector (Vector Node) -> Int -> Vector (Vector Node)
