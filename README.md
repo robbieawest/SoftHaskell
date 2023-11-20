@@ -13,7 +13,7 @@ Rotating the simulation changes the direction of gravity opposite to your rotati
 
 Simulation constants can be changed within the Constants.hs file, where there is also description on which do what, and the ramifications of changing them.
 This file also has display options such as colours, screen size and so forth.
-The springs display the force they are applying at one moment by its colour, this visualisation is quite beautiful really, with certain settings you can get some great affects.
+The springs display the force they are applying at one moment by its colour, this visualisation is quite nice, with certain settings you can get some great effects.
 I have put some of the settings I think work well in the Constants.hs file already, but please edit them and play with the simulation, I hope you find it as fun as I found it while making this.
 
 The github repo in which this is posted is:
@@ -36,10 +36,10 @@ Strict containers were needed to combat space leaks.
 The file structure follows the default cabal file structure, where the main directory contains a CHANGELOG.md, a README.md, a SoftHaskell.cabal file, an /app/ folder where the source files are contained, and a /videos/ folder where the sample output is given.
 
 This program uses multiple source files:
-Main.hs (Constains the main :: IO() function)
-Constants.hs (Simulation constants)
-Simulation.hs (Functions for the simulation)
-Base.hs (Misc and drawing functions, definitions of data structures) 
+Main.hs (Constains the main :: IO() function) \
+Constants.hs (Simulation constants) \
+Simulation.hs (Functions for the simulation) \
+Base.hs (Misc and drawing functions, definitions of data structures) \
 
 #### Sidenote on sample output
 
