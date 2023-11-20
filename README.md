@@ -46,6 +46,7 @@ Base.hs (Misc and drawing functions, definitions of data structures)
 
 The output given is using constants that I have found produce nice results, changing constants may produce a result which does not look as good or as functional as the ones provided.
 
+<video src='videos/num1.gif' width=180/>
 
 
 
