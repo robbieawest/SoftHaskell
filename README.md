@@ -39,7 +39,7 @@ This program uses multiple source files:
 Main.hs (Constains the main :: IO() function) \
 Constants.hs (Simulation constants) \
 Simulation.hs (Functions for the simulation) \
-Base.hs (Misc and drawing functions, definitions of data structures) \
+Base.hs (Misc and drawing functions, definitions of data structures)
 
 #### Sidenote on sample output
 
