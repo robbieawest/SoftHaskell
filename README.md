@@ -8,10 +8,11 @@ This is a simulation of soft bodies in 2D space using the Gloss library for Hask
 It simulates a grid of nodes connected by springs which portray the properties of Hooke's Law for spring motion.
 The position of each node is updated every frame with Semi-Implicit Euler integration, and is determined from pulling/pushing forces from the connecting springs, and via collision with boundaries and other nodes.
 
-You can interact with the simulation with the standard Gloss mouse motions such as alt-click to rotate, alt + mouse wheel to zoom and left click to move the camera.
+You can interact with the simulation with the standard Gloss mouse motions such as alt-click to rotate, mouse wheel to zoom and left click to move the camera.
 Rotating the simulation changes the direction of gravity opposite to your rotation, making a nice effect of the system always falling down your screen.
 
 Simulation constants can be changed within the Constants.hs file, where there is also description on which do what, and the ramifications of changing them.
+The constants may need to be changed, especially structure width and height, if the simulation does not run fast enough. For reference, the default simulation runs at >100fps single threaded on my AMD Ryzen 5.
 This file also has display options such as colours, screen size and so forth.
 The springs display the force they are applying at one moment by its colour, this visualisation is quite nice, with certain settings you can get some great effects.
 I have put some of the settings I think work well in the Constants.hs file already, but please edit them and play with the simulation, I hope you find it as fun as I found it while making this.
@@ -33,7 +34,7 @@ Strict containers were needed to combat space leaks.
 
 ## File Structure
 
-The file structure follows the default cabal file structure, where the main directory contains a CHANGELOG.md, a README.md, a SoftHaskell.cabal file, an /app/ folder where the source files are contained, and a /videos/ folder where the sample output is given.
+The file structure follows the default cabal file structure, where the main directory contains a CHANGELOG.md, a README.md, a SoftHaskell.cabal file, an /app/ folder where the source files are contained, and a /videos/ folder where the sample output is given as gifs.
 
 This program uses multiple source files:
 Main.hs (Constains the main :: IO() function) \

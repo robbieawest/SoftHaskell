@@ -116,7 +116,7 @@ springToPicture :: Vector (Vector Node) -> Spring -> Picture
 springToPicture nodes (Spring d sc al n1 n2) = col line
     where
         diff = getPos nodes n2 `subtract` getPos nodes n1
-        pushOrPull = (al - pythag diff) * 0.5 --Somewhat so of hookes law, but scaled correctly.
+        pushOrPull = (al - pythag diff) * 0.22 --Somewhat so of hookes law, but scaled correctly.
         colorCoef = tanh pushOrPull --Put within -1<->1 range
         
         line = Line [translatePointOrigin(getPos nodes n1), translatePointOrigin(getPos nodes n2)]
